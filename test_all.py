@@ -20,7 +20,7 @@ else:
 opt.nThreads = 1   # test code only supports nThreads = 1
 opt.batchSize = 1  # test code only supports batchSize = 1
 opt.sequence_length = 1
-test_nums = [1, 2, 3, 4]  # choose input identity images
+test_nums = [1,] # [1, 2, 3, 4]  # choose input identity images
 
 model = Gen_Model.GenModel(opt)
 # _, _, start_epoch = util.load_test_checkpoint(opt.test_resume_path, model)
@@ -29,6 +29,8 @@ visualizer = Visualizer(opt)
 # find the checkpoint's path name without the 'checkpoint.pth.tar'
 path_name = ntpath.basename(opt.test_resume_path)[:-19]
 web_dir = os.path.join(opt.results_dir, path_name, '%s_%s' % ('test', start_epoch))
+print("Output directory:")
+print(web_dir)
 for i in test_nums:
     A_path = os.path.join(opt.test_A_path, 'test_sample' + str(i) + '.jpg')
     test_folder = Test_VideoFolder(root=opt.test_root, A_path=A_path, config=opt)
