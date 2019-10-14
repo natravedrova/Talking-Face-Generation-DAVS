@@ -147,7 +147,7 @@ class Visualizer():
 
 
         for label, image_numpy in visuals.items():
-            image_name = '%s_%s_%s.png' % (name, label, sequence)
+            image_name = '%s_%s_%s.png' % (name, label, str(sequence).zfill(3))
             path1 = os.path.join(image_dir, str(test_num))
             if not os.path.exists(path1):
                 os.makedirs(path1)
