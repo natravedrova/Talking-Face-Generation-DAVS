@@ -8,5 +8,6 @@ __pycache__/
 *.tar
 *.jpg
 *.png
+*.mp4
 
 .idea/
