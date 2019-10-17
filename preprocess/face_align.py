@@ -1,9 +1,34 @@
 from __future__ import print_function, division
 import numpy as np
 import os
-import os.path
 import cv2
-import scipy.io as scio
+import dlib
+
+
+def find_face_landmarks(input_path, predictor_path):
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor(predictor_path)
+    img = dlib.load_rgb_image(input_path)
+    dets = detector(img, 1)
+    try:
+        shape = predictor(img, dets[0])
+    except IndexError:
+        print("No face landmarks were found.")
+        return []
+    return list(map(lambda p: np.matrix([p.x, p.y]), shape.parts()))
+
+
+def get_three_face_coordinates_from_68_face_landmarks(landmarks):
+    """
+    The key points for face alignment we used are the two for the center of the eyes and
+    the average point of the corners of the mouth
+    :param landmarks: list of numpy matrices returned by find_face_landmarks function
+    :return: list of three lists with required coordinates
+    """
+    left_eye = np.mean(landmarks[36:42], axis=0)[0]
+    right_eye = np.mean(landmarks[42:48], axis=0)[0]
+    mouth = np.mean(landmarks[48:], axis=0)[0]
+    return [left_eye, right_eye, mouth]
 
 
 def transformation_from_points(points1, scale):
@@ -27,7 +52,7 @@ def transformation_from_points(points1, scale):
     U, S, Vt = np.linalg.svd(np.matmul(points1.T, points2))
     R = (np.matmul(U, Vt)).T
     sR = (s2 / s1) * R
-    T = c2.reshape(2,1) - (s2 / s1) * np.matmul(R, c1.reshape(2,1))
+    T = c2.reshape(2, 1) - (s2 / s1) * np.matmul(R, c1.reshape(2, 1))
     M = np.concatenate((sR, T), axis=1)
     return M
 
@@ -52,10 +77,9 @@ class ImageLoader(object):
         if os.path.exists(path):
             img = cv2.imread(path)
             three_points = np.zeros((3, 2))
-            three_points[0] = np.array(points[:2])  # the location of the left eye
-            three_points[1] = np.array(points[2:4])  # the location of the right eye
-            # the location of the center of the mouth
-            three_points[2] = np.array([(points[6] + points[8]) / 2, (points[7] + points[9]) / 2])
+            three_points[0] = points[0]  # the location of the left eye
+            three_points[1] = points[1]  # the location of the right eye
+            three_points[2] = points[2]  # the location of the center of the mouth
             three_points.astype(np.float32)
             M = transformation_from_points(three_points, self.scale)
             align_img = cv2.warpAffine(img, M, self.ori_scale, borderValue=[127, 127, 127])
@@ -69,3 +93,12 @@ class ImageLoader(object):
         else:
             raise Exception("image = 0")
 
+
+if __name__ == '__main__':
+    image_path = '../face.bmp'
+    landmarks = find_face_landmarks(image_path, 'shape_predictor_68_face_landmarks.dat')
+    points = get_three_face_coordinates_from_68_face_landmarks(landmarks)
+    im_loader = ImageLoader(mode='test')
+    img = im_loader.image_loader(image_path, points)
+    cv2.imshow('', img)
+    cv2.waitKey()
