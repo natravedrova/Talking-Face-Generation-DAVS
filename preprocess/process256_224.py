@@ -15,6 +15,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--word_label', type=int, default=3, help='number of threads')
 opt = parser.parse_args()
 
+
 class Config(object):
     def __init__(self):
         self.main_PATH = "/home/hzhou/data/LRW/lipread_mp4/"
@@ -33,8 +34,10 @@ class Config(object):
         self.right = int(self.eye_avg[0] + self.eye_avg[1] + 5)
         self.scale = float(self.save_size / (self.eye_avg[1] * 2 + 10))
 
+
 config = Config()
 print(config.scale)
+
 
 def create_video_folders(main_PATH, name_id):
     """Creates a directory for each label name in the dataset."""
@@ -84,9 +87,8 @@ class ImageLoader256(object):
 
         return align_img2
 
-
-
-    def transformation_from_points(self, points1, scale):
+    @staticmethod
+    def transformation_from_points(points1, scale):
         points = [[70, 112],
                   [110, 112],
                   [70, 112],
@@ -114,7 +116,6 @@ class ImageLoader256(object):
         return M
 
     def find_three_points(self):
-
         self.three_points[0, :] = self.face_points[74, :]
         self.three_points[1, :] = self.face_points[77, :]
         self.three_points[2, :] = self.face_points[74, :]
@@ -130,7 +131,6 @@ class ImageLoader256(object):
         self.transmouth[:, 1] -= self.t
         self.transmouth = self.transmouth * self.output_scale[0] / self.crop_height
         # return transmouth
-
 
 
 def warp_and_save(M, frame, config=config):
@@ -153,6 +153,7 @@ def save_transpoints(face_points, M, config=config):
     transmouth = transmouth * config.scale
     return transmouth
 
+
 end = time.time()
 
 face_data_name = "_mouth.txt"
@@ -164,10 +165,9 @@ val = "val"
 p_lists = {0 : "test" , 1 : "train", 2 : "val"}
 
 
-if (not os.path.exists(config.save_PATH)):
+if not os.path.exists(config.save_PATH):
     os.mkdir(config.save_PATH)
 for p in range(3):                                    # create path train, val, test / image, flow
-
     p_name = p_lists[p]
     save_dir = create_video_folders(config.save_PATH, p_name)
     # if (not os.path.exists(hsv_dir)):
@@ -186,7 +186,6 @@ for p in range(3):                                   # test, train, val loop
     word_label = opt.word_label                                            # word_label < 500
     # for word_label in range(2):
 
-
     ABOUT_dir = create_video_folders(video_savedir, str(word_label))
     word = word_names[word_label]
     word_dir = config.main_PATH + word                                             # /home/wyang/Downloads/LRW/lipread_mp4/YOUNG
@@ -199,7 +198,6 @@ for p in range(3):                                   # test, train, val loop
     vid = 0
     file_list = {}
     for video in video_names:                               # YOUNG_00023.mp4 loop
-
         video_dir = os.path.join(word_dir_p, video)           # /home/wyang/Downloads/LRW/lipread_mp4/YOUNG/val/YOUNG_00023.mp4
         facep_dir = video_dir[:-4] + face_data_name    # /home/wyang/Downloads/LRW/lipread_mp4/ABOUT/test/ABOUT_00023_face.txt
         if os.path.getsize(facep_dir) == 0:
@@ -243,13 +241,12 @@ for p in range(3):                                   # test, train, val loop
 
                 ret, frame = capture.read()
                 if ret:
-		    
                     if not cropped_align_state256:
                         img256 = Align256.image_loader(frame)
                         cv2.imwrite(os.path.join(align_face_dir256, str(i) + ".jpg"), img256)
                         face2 = cv2.cvtColor(img256, cv2.COLOR_BGR2GRAY)                  # grey scale image
                         flow = 0
-                        if (n2 >= 1):
+                        if n2 >= 1:
                             flow = cv2.calcOpticalFlowFarneback(prvs2, face2, 0.5, 3, 10, 5, 5, 1.1, 0)
                             flow = cv2.normalize(flow, None, 0, 255, cv2.NORM_MINMAX)
                             flow = flow.astype(np.uint8)
@@ -261,9 +258,6 @@ for p in range(3):                                   # test, train, val loop
                         transpoints256.append(transface256)
                         M_save256.append(Align256.M)
 
-
-
-
             if not os.path.exists(os.path.join(ABOUT_00001_dir, "M256.npy")):
                 np.save(os.path.join(ABOUT_00001_dir, "M256.npy"), M_save256)
 
@@ -272,16 +266,13 @@ for p in range(3):                                   # test, train, val loop
 
             if not os.path.exists(os.path.join(ABOUT_00001_dir, str(vid) + ".wav")):
                 command = ['ffmpeg -i', video_dir,
-                            '-f wav -acodec pcm_s16le -ar 16000',
-                            os.path.join(ABOUT_00001_dir, str(vid) + ".wav")]
+                           '-f wav -acodec pcm_s16le -ar 16000',
+                           os.path.join(ABOUT_00001_dir, str(vid) + ".wav")]
                 command = ' '.join(command)
                 try:
-                    output = subprocess.check_output(command, shell=True,
-                                                     stderr=subprocess.STDOUT)
+                    output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
                 except subprocess.CalledProcessError as err:
                     print(err)
-
-
 
         vid += 1
 
