@@ -2,6 +2,34 @@
 # https://www.learnopencv.com/video-stabilization-using-point-feature-matching-in-opencv/
 import numpy as np
 import cv2
+import dlib
+
+TRAINED_SHAPE_PREDICTOR = '../preprocess/shape_predictor_68_face_landmarks.dat'
+
+
+# TODO: tune usage of face landmark as good features for track
+def find_face_landmarks(img, predictor):
+    detector = dlib.get_frontal_face_detector()
+    dets = detector(img, 1)
+    try:
+        shape = predictor(img, dets[0])
+    except IndexError:
+        print("No face landmarks were found.")
+        return np.nan
+    return list(map(lambda p: np.matrix([p.x, p.y]), shape.parts()))
+
+
+def get_three_face_coordinates_from_68_face_landmarks(landmarks):
+    """
+    The key points for face alignment we used are the two for the center of the eyes and
+    the average point of the corners of the mouth
+    :param landmarks: list of numpy matrices returned by find_face_landmarks function
+    :return: list of three lists with required coordinates
+    """
+    left_eye = np.mean(landmarks[36:42], axis=0)
+    right_eye = np.mean(landmarks[42:48], axis=0)
+    mouth = np.mean(landmarks[48:], axis=0)
+    return np.array([left_eye, right_eye, mouth]).astype(np.float32)
 
 
 def moving_average(curve, radius):
@@ -48,7 +76,6 @@ def smooth(trajectory, smoothing_radius=30):
     # Filter the x, y and angle curves
     for i in range(3):
         smoothed_trajectory[:, i] = moving_average(trajectory[:, i], radius=smoothing_radius)
-
     return smoothed_trajectory
 
 
@@ -65,7 +92,7 @@ def stabilize_video(input_path, output_path):
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     # Define the codec for output video
-    fourcc = cv2.VideoWriter_fourcc(*'MJPG')  # for avi output; http://www.fourcc.org/codecs.php#letter_a
+    fourcc = cv2.VideoWriter_fourcc(*'MJPG')  # for avi output; http://www.fourcc.org/codecs.php
     # Get frames per second (fps)
     fps = cap.get(cv2.CAP_PROP_FPS)
     out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
@@ -74,14 +101,17 @@ def stabilize_video(input_path, output_path):
     _, prev = cap.read()
     prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
 
+    predictor = dlib.shape_predictor(TRAINED_SHAPE_PREDICTOR)
     # Pre-define transformation-store array
-    transforms = np.zeros((n_frames - 1, 3), np.float32)
-    for i in range(n_frames - 2):
+    transforms = np.zeros((n_frames-1, 3), np.float32)
+    for i in range(n_frames-2):
         # Detect feature points in previous frame
+        # landmarks = find_face_landmarks(prev_gray, predictor)
+        # prev_pts = get_three_face_coordinates_from_68_face_landmarks(landmarks)
         prev_pts = cv2.goodFeaturesToTrack(prev_gray,
-                                           maxCorners=200,
-                                           qualityLevel=0.001,
-                                           minDistance=10,
+                                           maxCorners=30,
+                                           qualityLevel=0.01,
+                                           minDistance=5,
                                            blockSize=3)
         success, curr = cap.read()
         if not success:
@@ -89,7 +119,7 @@ def stabilize_video(input_path, output_path):
         curr_gray = cv2.cvtColor(curr, cv2.COLOR_BGR2GRAY)
         # Calculate optical flow (i.e. track feature points)
         curr_pts, status, err = cv2.calcOpticalFlowPyrLK(prev_gray, curr_gray, prev_pts, None)
-        assert prev_pts.shape == curr_pts.shape
+        assert len(prev_pts) == len(curr_pts)
 
         # Filter only valid points
         idx = np.where(status == 1)[0]
@@ -106,16 +136,13 @@ def stabilize_video(input_path, output_path):
         transforms[i] = [dx, dy, da]
         # Move to next frame
         prev_gray = curr_gray
-
         # print("Frame: " + str(i) + "/" + str(n_frames) + " -  Tracked points : " + str(len(prev_pts)))
 
     # Compute trajectory using cumulative sum of transformations
     trajectory = np.cumsum(transforms, axis=0)
     smoothed_trajectory = smooth(trajectory)
-
     # Calculate difference in smoothed_trajectory and trajectory
     difference = smoothed_trajectory - trajectory
-
     # Calculate newer transformation array
     transforms_smooth = transforms + difference
 
@@ -155,10 +182,6 @@ def stabilize_video(input_path, output_path):
         # Write the frame to the file
         frame_out = cv2.hconcat([frame, frame_stabilized])
 
-        # # If the image is too big, resize it.
-        # if frame_out.shape[1] > 1920:
-        #     frame_out = cv2.resize(frame_out, (frame_out.shape[1] / 2, frame_out.shape[0] / 2))
-
         cv2.imshow("Before and After", frame_out)
         cv2.waitKey(50)
         out.write(frame_stabilized)
@@ -167,7 +190,7 @@ def stabilize_video(input_path, output_path):
 
 
 def main():
-    stabilize_video('../output.mp4', '../ouput_stable.avi')
+    stabilize_video('../output2.mp4', '../ouput2_stable.mov')
 
 
 if __name__ == '__main__':
