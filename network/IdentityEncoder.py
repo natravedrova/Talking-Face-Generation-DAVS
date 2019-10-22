@@ -43,7 +43,7 @@ class IdentityEncoder(nn.Module):
     def __init__(self, opt=opt):
         super(IdentityEncoder, self).__init__()
         self.opt = opt
-        self.add_module('block' + str(01), BasicBlock(3, 32, name="01", conv_std=0.025253814, kernel_size=7, stride=2, padding=3))
+        self.add_module('block' + str(1), BasicBlock(3, 32, name="01", conv_std=0.025253814, kernel_size=7, stride=2, padding=3))
         self.pool1 = nn.MaxPool2d(2, 2)
         self.add_module('block' + str(11), BasicBlock(32, 32, name="11", conv_std=0.058925565))
         self.add_module('block' + str(12), BasicBlock(32, 32, name="12", conv_std=0.058925565))
@@ -69,7 +69,7 @@ class IdentityEncoder(nn.Module):
 
     def forward(self, x):
         x = x.view(-1, self.opt.image_channel_size, self.opt.image_size, self.opt.image_size)
-        net0 = self._modules['block' + str(01)](x)
+        net0 = self._modules['block' + str(1)](x)
         net1 = self.pool1(net0)
         for j1 in range(11, 15):
             net1 = self._modules['block' + str(j1)](net1)
