@@ -44,7 +44,7 @@ class mfcc_encoder_alter(nn.Module):
         super(mfcc_encoder_alter, self).__init__()
         self.relu = nn.LeakyReLU(0.2, True)
         self.conv1 = nn.Conv2d(1, 64, kernel_size=(3, 12), stride=(1,1), padding=0, bias=False)
-        self.bn1 = nn.BatchNorm1d(64)
+        self.bn1 = nn.BatchNorm2d(64)
         self.pool1 = nn.MaxPool2d(1, 3)
         self.conv2 = nn.Conv2d(64, 256, (3, 1), 1, (1, 0), bias=False)
         self.bn2 = nn.BatchNorm2d(256)
